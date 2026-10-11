@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>La misión secreta de tus 11 años</title>
+<title>El gran regalo misterioso de tus 11 años</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Special+Elite&family=UnifrakturCook:wght@700&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{--card:rgba(255,255,255,.12);--line:rgba(255,255,255,.28);--txt:#fff;--soft:#e9defa;--gold:#ffd86b;--pink:#ff7eb6;--ok:#6ee7a8;--bad:#ff8a8a}
@@ -141,10 +141,19 @@ box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.25);text-alig
 }
 #resetBtn{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;font-size:.75rem;padding:8px 12px;border-radius:12px;
 background:#1a1245;color:#ffd86b;border:1px solid #ffd86b;box-shadow:0 4px 12px rgba(0,0,0,.4);opacity:.9}
+#mini{position:fixed;top:0;left:0;right:0;z-index:30;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;text-align:center;font-size:.82rem;font-weight:800;color:#ffd86b;
+background:rgba(26,18,69,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.hasmini main{padding-top:46px}
+.mas{display:inline-block}.mas svg,.mas img{width:100%;height:100%;display:block;object-fit:contain}
+.mrow{display:flex;justify-content:center;gap:8px;margin:6px 0}
+.mrow .mas{animation:float 3s infinite ease-in-out}.mrow .mas:nth-child(2){animation-delay:.5s}.mrow .mas:nth-child(3){animation-delay:1s}.mrow .mas:nth-child(4){animation-delay:1.5s}.mrow .mas:nth-child(5){animation-delay:2s}
+.card.pk{position:relative;margin-top:46px}
+.mas.peek{position:absolute;top:-40px;right:16px;animation:float 3s infinite ease-in-out}
 </style>
 </head>
 <body>
 <div id="stars"></div>
+<div id="mini" class="hidden"></div>
 <canvas id="fw"></canvas><canvas id="confetti"></canvas><div class="fall" id="fall"></div>
 <main id="app"></main>
 <button id="resetBtn" class="hidden" type="button">🔄 Reset</button>
@@ -192,21 +201,21 @@ function startTick(fn){clearInterval(tick);fn();tick=setInterval(fn,1000)}
 function renderLocked(){
   app.innerHTML=`
   <div class="card center">
-    <div class="envelope">🔒</div>
-    <h1>Una misión secreta se está preparando…</h1>
+    <div class="envelope" id="lk" style="user-select:none;-webkit-user-select:none;touch-action:manipulation">🔒</div>
+    <h1>Un gran regalo misterioso se está preparando…</h1>
     <p class="soft">Algo muy especial te espera, pero todavía no es el momento. La aventura se abrirá el <b>11 de octubre</b> a las 12:00 a. m.</p>
     ${unitsHTML("cdOpen")}
     <p class="small soft">⏳ Falta muy poquito…</p>
   </div>
-  <div class="card center">
-    <button class="ghost" id="keyBtn">🗝️ Acceder con clave</button>
-    <div id="keyBox" class="hidden" style="margin-top:12px">
+  <div class="card center hidden" id="keyCard">
+    <div id="keyBox">
       <input id="keyIn" type="password" placeholder="Escribe la clave" autocomplete="off" style="width:100%">
       <div class="msg" id="keyMsg"></div>
       <button id="keyGo">Entrar</button>
     </div>
   </div>`;
-  $("#keyBtn").onclick=()=>{$("#keyBox").classList.toggle("hidden");$("#keyIn").focus()};
+  let taps=0,tm;
+  $("#lk").onclick=()=>{taps++;clearTimeout(tm);tm=setTimeout(()=>{taps=0},2500);if(taps>=5){taps=0;$("#keyCard").classList.remove("hidden");$("#keyIn").focus()}}; // acceso secreto: 5 toques al candado
   const go=()=>{
     if(hash($("#keyIn").value.trim())===KEY_HASH){
       bypass=true;try{sessionStorage.setItem("bypass","1")}catch(e){}
@@ -215,34 +224,63 @@ function renderLocked(){
   };
   $("#keyGo").onclick=go;
   $("#keyIn").addEventListener("keydown",e=>{if(e.key==="Enter")go()});
-  startTick(()=>{ if(isOpen()){route();return} fillUnits("cdOpen",OPENS_AT-Date.now()) });
+  startTick(()=>{ if(isOpen()){route();return} updateMini(); fillUnits("cdOpen",OPENS_AT-Date.now()) });
 }
 
 /* ============ BARRA SUPERIOR: CONTADOR + PROGRESO ============ */
-function topHTML(current){
+function topHTML(current,big){
   let bars="";for(let i=0;i<5;i++){bars+=`<i class="${i<done?"done":i===current?"now":""}"></i>`}
   return `
-  <div class="card timer" id="timerCard">
+  ${big?`<div class="card timer" id="timerCard">
     <div class="t" id="tTitle">⏳ ¡El regalo tiene una fecha límite!</div>
     ${unitsHTML("cdLimit")}
     <div class="small soft" id="tMsg">El regalo está reservado para ti… pero el reloj no se detiene. ¡Descubre el misterio antes de que llegue la medianoche!</div>
-  </div>
+  </div>`:""}
   <div class="topbar"><span class="small soft">Etapa ${Math.min(done+1,5)} de 5 · ${done} completadas</span>
   <button class="ghost" id="clues">🗂️ Mis pistas</button></div>
   <div class="progress">${bars}</div>`;
 }
+function updateMini(){
+  const m=$("#mini");if(!m)return;
+  const show=isOpen()&&!$("#start")&&!$("#keyIn");
+  m.classList.toggle("hidden",!show);document.body.classList.toggle("hasmini",show);
+  const left=DEADLINE-Date.now(),p=parts(left);
+  m.textContent=left<=0?"🌙 ¡Sonaron las campanadas de medianoche! La búsqueda sigue abierta":`⏳ ${p.d?p.d+"d ":""}${pad(p.h)}:${pad(p.m)}:${pad(p.s)} · el regalo vence a medianoche`;
+}
 function bindTop(){
   const c=$("#clues"); if(c) c.onclick=renderReview;
   startTick(()=>{
+    updateMini();
     const left=DEADLINE-Date.now(); const card=$("#timerCard"); if(!card)return;
     if(left<=0){
       card.classList.add("midnight");
       $("#tTitle").textContent="🌙 ¡Las campanadas de medianoche han sonado!";
-      $("#tMsg").textContent="¿Lograste completar tu misión? ¡No te preocupes, la búsqueda sigue abierta para ti!";
+      $("#tMsg").textContent="¿Lograste descubrir tu gran regalo misterioso? ¡No te preocupes, la búsqueda sigue abierta para ti!";
       fillUnits("cdLimit",0);
     }else fillUnits("cdLimit",left);
   });
 }
+
+/* ============ MASCOTAS KAWAII (originales; si existe img/cat.png, bunny.png, puppy.png o ghost.png se usa esa imagen) ============ */
+const EY='<circle cx="38" cy="56" r="4" fill="#3b2a4a"/><circle cx="62" cy="56" r="4" fill="#3b2a4a"/><circle cx="39.5" cy="54.5" r="1.4" fill="#fff"/><circle cx="63.5" cy="54.5" r="1.4" fill="#fff"/>';
+const BL='<circle cx="29" cy="66" r="5" fill="#ff9fbe" opacity=".55"/><circle cx="71" cy="66" r="5" fill="#ff9fbe" opacity=".55"/>';
+const MS={
+ kitty:'<polygon points="20,42 24,8 46,28" fill="#ffd9a8"/><polygon points="80,42 76,8 54,28" fill="#ffd9a8"/><ellipse cx="50" cy="60" rx="36" ry="30" fill="#ffe3c2"/>'+EY+BL+'<ellipse cx="50" cy="63" rx="3.5" ry="2.5" fill="#ff8fb3"/><path d="M44 68 Q50 73 56 68" stroke="#3b2a4a" stroke-width="2" fill="none"/><polygon points="72,24 88,14 88,34" fill="#7fe0c4"/><polygon points="72,24 56,14 56,34" fill="#7fe0c4"/><circle cx="72" cy="24" r="5" fill="#35b896"/>',
+ melody:'<ellipse cx="36" cy="22" rx="9" ry="22" fill="#ffd6e8"/><ellipse cx="64" cy="22" rx="9" ry="22" fill="#ffd6e8"/><ellipse cx="36" cy="24" rx="4" ry="15" fill="#ff9fc4"/><ellipse cx="64" cy="24" rx="4" ry="15" fill="#ff9fc4"/><ellipse cx="50" cy="62" rx="33" ry="29" fill="#fff0f7"/>'+EY+BL+'<ellipse cx="50" cy="63" rx="3" ry="2.2" fill="#ff7aa6"/><path d="M45 68 Q50 72 55 68" stroke="#3b2a4a" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="5" fill="#ffd86b"/>',
+ cinna:'<ellipse cx="22" cy="54" rx="12" ry="22" fill="#8fd0f5" transform="rotate(14 22 54)"/><ellipse cx="78" cy="54" rx="12" ry="22" fill="#8fd0f5" transform="rotate(-14 78 54)"/><ellipse cx="50" cy="56" rx="32" ry="30" fill="#d6f0ff"/><ellipse cx="50" cy="67" rx="14" ry="10" fill="#fff"/>'+EY+BL+'<ellipse cx="50" cy="62" rx="4" ry="3" fill="#2f4a6b"/><path d="M46 70 Q50 80 54 70Z" fill="#ff8fb3"/><text x="50" y="42" font-size="14" text-anchor="middle" fill="#ffd86b">★</text>',
+ kuromi:'<polygon points="28,30 34,6 46,24" fill="#7c5cd6"/><polygon points="72,30 66,6 54,24" fill="#7c5cd6"/><path d="M18 92 V52 A32 32 0 0 1 82 52 V92 L72 84 L61 92 L50 84 L39 92 L28 84Z" fill="#c9b6ff"/>'+EY+BL+'<ellipse cx="50" cy="68" rx="4" ry="3" fill="#3b2a4a"/><text x="50" y="42" font-size="13" text-anchor="middle" fill="#fff">★</text>',
+ pompom:'<ellipse cx="50" cy="62" rx="34" ry="30" fill="#fff2a8"/><ellipse cx="50" cy="32" rx="17" ry="8" fill="#8b2e2e"/><path d="M33 56 Q39 50 45 56 M55 56 Q61 50 67 56" stroke="#3b2a4a" stroke-width="2.5" fill="none"/><path d="M44 66 Q50 72 56 66" stroke="#3b2a4a" stroke-width="2" fill="none"/>'
+};
+const MK=["kitty","melody","cinna","kuromi","pompom"],ALL5=MK;
+function mas(k,s,cls){return `<span class="mas ${cls||""}" data-k="${k}" style="width:${s}px;height:${s}px"></span>`}
+function hydrateMas(){
+  document.querySelectorAll(".mas:not([data-h])").forEach(sp=>{
+    sp.dataset.h=1;const k=sp.dataset.k;
+    sp.innerHTML=`<svg viewBox="0 0 100 100">${MS[k]}</svg>`;
+    const im=new Image();im.onload=()=>{sp.innerHTML="";sp.appendChild(im)};im.src=`img/${k}.png`;
+  });
+}
+new MutationObserver(hydrateMas).observe(app,{childList:true,subtree:true});
 
 /* ============ BIENVENIDA (cuando se abre el juego) ============ */
 const ITEMS=["🎈","🎈","🎈","🎈","🦄","🦄","🌈","🎀","✨","🧁","🎂","💖","⭐"];
@@ -271,16 +309,16 @@ function startFW(){
 }
 function renderIntro(){
   app.innerHTML=`<i id="fwFlag"></i>
-  <div class="unis">🦄🎂🦄</div>
+  <div class="mrow">${ALL5.map(k=>mas(k,54)).join("")}</div>
   <div class="hb">¡FELIZ CUMPLEAÑOS!</div>
   <p class="center" style="font-size:1.3rem;font-weight:800;margin:4px 0 14px">🎉 número 11 🎉</p>
   <div class="card center">
-    <h1 style="font-size:1.35rem">La misión secreta de tus 11 años</h1>
+    <h1 style="font-size:1.35rem">El gran regalo misterioso de tus 11 años</h1>
     <p class="soft">Cinco misterios, cinco desafíos y un regalo que te está esperando… ¿podrás encontrarlo?</p>
     <button class="big" id="start">Iniciar</button>
     <p class="small soft">Resuelve cada código para descubrir a dónde debes ir. No puedes avanzar sin descifrar el mensaje.</p>
   </div>
-  ${topHTML(-1).replace('<div class="topbar">','<div class="topbar hidden">')}`;
+  ${topHTML(-1,true).replace('<div class="topbar">','<div class="topbar hidden">')}`;
   bindTop();startFW();for(let i=0;i<18;i++)spawn(true);
   $("#start").onclick=renderLetter;
 }
@@ -310,7 +348,7 @@ function styleLetter(){ // borde inferior roto, como papel rasgado
   s.style.clipPath=s.style.webkitClipPath="polygon("+p.join(",")+")";
 }
 function renderLetter(){
-  window.scrollTo(0,0);app.classList.remove("skip");
+  window.scrollTo(0,0);setTimeout(updateMini,0);app.classList.remove("skip");
   app.innerHTML=`<div class="scene" id="scene">
     <div class="cap">Una carta para ti…</div>
     <div class="env"><div class="eb"></div><div class="el">Para mi hermanita 💗</div><div class="ef"></div><div class="efl"></div><div class="seal2">♥</div></div>
@@ -326,7 +364,7 @@ function renderLetter(){
   $("#go").onclick=()=>route(true);
 }
 function renderLetterAgain(){
-  window.scrollTo(0,0);
+  window.scrollTo(0,0);setTimeout(updateMini,0);
   app.innerHTML=`${letterHTML()}<button class="big" id="bk">Volver</button>`;styleLetter();
   $("#bk").onclick=()=>route(true);
 }
@@ -340,8 +378,8 @@ function renderStage(n){
   let al="";for(let i=0;i<26;i++)al+=`<div><b>${String.fromCharCode(65+i)}</b> ${i+1}</div>`;
   app.innerHTML=`
   ${topHTML(n)}
-  <div class="card">
-    <p class="small soft" style="margin:0">Misión ${n+1}</p>
+  <div class="card pk">${mas(MK[n],58,"peek")}
+    <p class="small soft" style="margin:0">Gran regalo misterioso · Paso ${n+1}</p>
     <h2>🔐 ${st.title}</h2>
     <p>${st.instr}</p>
     <details><summary>🔤 Ver el abecedario secreto</summary><div class="alpha">${al}</div></details>
@@ -390,7 +428,7 @@ function renderReveal(n,animate){
     <h2>¡Código descifrado!</h2>
     <p>Has demostrado que eres una gran detective.</p>
   </div>
-  <div class="card reveal center">
+  <div class="card reveal center pk">${mas(MK[n],58,"peek")}
     <p class="small soft" style="margin:0">Tu siguiente destino</p>
     <p style="font-size:1.1rem">${st.reveal}</p>
   </div>
@@ -406,7 +444,7 @@ function renderReveal(n,animate){
 /* ============ MIS PISTAS ============ */
 function renderReview(){
   let list="";
-  for(let i=0;i<done&&i<5;i++) list+=`<div class="clue"><b>Misión ${i+1}:</b> ${DATA.stages[i].reveal}</div>`;
+  for(let i=0;i<done&&i<5;i++) list+=`<div class="clue"><b>Paso ${i+1}:</b> ${DATA.stages[i].reveal}</div>`;
   if(!list) list=`<p class="soft center">Aún no has descifrado ningún código. ¡Tú puedes!</p>`;
   app.innerHTML=`${topHTML(Math.min(done,4))}<div class="card"><h2>🗂️ Mis pistas descubiertas</h2>${list}</div>
   <button class="big" id="back">Volver</button><p></p><button class="big" id="rl" style="background:linear-gradient(135deg,#ffc2dd,#ff7eb6);box-shadow:0 5px 0 #b44a7f">💌 Releer mi carta</button>`;
@@ -421,7 +459,9 @@ function renderFinal(animate){
   ${topHTML(-1)}
   <i id="fwFlag"></i><div class="card center">
     <div style="font-size:3rem">🎉💗⭐</div>
-    <h1>¡MISIÓN CUMPLIDA!</h1>
+    <div class="mrow">${ALL5.map(k=>mas(k,54)).join("")}
+    <img src="img/trio.png" alt="" style="width:min(70%,260px);display:block;margin:8px auto" onerror="this.remove()"></div>
+    <h1>¡GRAN REGALO MISTERIOSO DESCUBIERTO!</h1>
     <p>¡Feliz cumpleaños número 11! Has resuelto todos los misterios y encontrado tu regalo. Espero que nunca olvides lo inteligente, creativa y especial que eres. Te quiero muchísimo. 💗</p>
     <div class="rbx" aria-label="Tarjeta de regalo Roblox de 50 dólares">
       <div class="band"><small>Tarjeta de regalo<br>¡Con Robux extra!*</small><b>$50</b></div>
